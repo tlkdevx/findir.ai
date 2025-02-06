@@ -155,6 +155,31 @@ async def optimize_finances(user_id: int, db: AsyncSession):
     for loan in loans:
         if loan.refinance_available:
             recommendations.append(f"🔄 Рассмотрите рефинансирование кредита '{loan.bank_name}', так как банк предлагает лучшие условия.")
+    # 📊 Улучшенный анализ месячного отчета
+    for record in records:
+        month = datetime.utcnow().strftime("%Y-%m")
+        loan_payment = (record.amount * record.interest_rate) / 12 if record.type == "loan" else 0
+        deposit_income = (record.amount * record.interest_rate) / 12 if record.type == "deposit" else 0
+        credit_card_fee = record.monthly_fee if record.type == "credit_card" else 0
+
+        monthly_report.append({
+            "month": month,
+            "deposit_income": round(deposit_income, 2),
+            "loan_payment": round(loan_payment, 2),
+            "credit_card_fee": round(credit_card_fee, 2),
+            "net_balance": round(deposit_income - loan_payment - credit_card_fee, 2)
+        })
+
+    # 📉 Анализ долговой нагрузки
+    total_loan_expenses = sum((loan.amount * loan.interest_rate) / 12 for loan in loans)
+    total_income = sum(deposit.amount * deposit.interest_rate / 12 for deposit in deposits)
+    debt_ratio = (total_loan_expenses / (total_income + 1)) * 100  # Чтобы избежать деления на 0
+
+    if debt_ratio > 40:
+        recommendations.append(
+            f"⚠️ Внимание! Долговая нагрузка {debt_ratio:.1f}%. "
+            "Рекомендуется уменьшить платежи по кредитам или увеличить доход."
+        )
 
     logging.info(f"📢 Итоговые рекомендации: {recommendations}")
 
