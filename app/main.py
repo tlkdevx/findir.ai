@@ -23,7 +23,7 @@ app.add_middleware(
 
 
 # ✅ Добавляем маршруты
-app.include_router(optimizer_router, prefix="/api")
+app.include_router(optimizer_router)
 
 @app.get("/")
 def read_root():
