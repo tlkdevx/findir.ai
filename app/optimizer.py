@@ -6,9 +6,8 @@ from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO)
 
-
 async def optimize_finances(user_id: int, db: AsyncSession):
-    """Оптимизирует финансы с ретроспективным анализом и помесячными данными."""
+    """Оптимизирует финансы с ретроспективным анализом и помесячными данными с учетом новых параметров."""
 
     result = await db.execute(select(FinancialRecord).where(FinancialRecord.user_id == user_id))
     records = result.scalars().all()
@@ -21,12 +20,46 @@ async def optimize_finances(user_id: int, db: AsyncSession):
             logging.warning(f"⚠️ Дата окончания раньше даты начала для {record.type} '{record.bank_name}', запись игнорируется.")
             continue
 
+        # 🔄 Обновление процентной ставки на основе истории изменений
+        if record.interest_rate_changes:
+            for change in record.interest_rate_changes:
+                change_date = datetime.strptime(change["date"], "%Y-%m-%d")
+                if change_date < datetime.utcnow():
+                    record.interest_rate = change["rate"]
+
         if record.type == "deposit":
             deposits.append(record)
         elif record.type == "loan":
             loans.append(record)
 
     logging.info(f"🔍 Найдено депозитов: {len(deposits)}, кредитов: {len(loans)}")
+    # ✅ 🔄 Анализ кредитных карт
+    for card in credit_cards:
+        if card.available_balance and card.available_balance > 0:
+            recommendations.append(
+                f"💳 У вас доступно {card.available_balance:.2f} ₽ на карте '{card.bank_name}'. "
+                "Рассмотрите использование вместо кредита, чтобы избежать процентов."
+            )
+
+        if card.grace_period_end_date and card.grace_period_end_date > datetime.utcnow():
+            recommendations.append(
+                f"⌛ Кредитная карта '{card.bank_name}' в грейс-периоде до {card.grace_period_end_date.strftime('%Y-%m-%d')}. "
+                "Оплатите баланс вовремя, чтобы не платить проценты!"
+            )
+
+        # 🏦 Проверка кредитного лимита
+        if card.credit_limit and card.credit_limit > 0 and card.available_balance < card.credit_limit * 0.3:
+            recommendations.append(
+                f"⚠️ Осторожно! Кредитная карта '{card.bank_name}' использована более чем на 70% лимита. "
+                "Это может снизить ваш кредитный рейтинг."
+            )
+
+        # 🔄 Рекомендация по рефинансированию кредитной карты
+        if card.refinance_rate and card.refinance_rate < card.purchase_interest_rate:
+            recommendations.append(
+                f"🔄 Рассмотрите рефинансирование кредитной карты '{card.bank_name}' на ставку {card.refinance_rate:.2f}%, "
+                f"так как текущая ставка на покупки {card.purchase_interest_rate:.2f}%."
+            )
 
     if not deposits or not loans:
         logging.info("❌ Нет депозитов или кредитов — нечего анализировать.")
@@ -53,6 +86,8 @@ async def optimize_finances(user_id: int, db: AsyncSession):
 
         total_deposit_income = 0
         total_loan_overpayment = 0
+        total_fees = 0
+        total_penalties = 0
 
         while current_date <= datetime.utcnow():
             month = current_date.strftime("%Y-%m")
@@ -65,24 +100,37 @@ async def optimize_finances(user_id: int, db: AsyncSession):
             loan_payment = (worst_loan.amount * worst_loan.interest_rate) / 12
             total_loan_overpayment += loan_payment
 
+            # 💰 Учет комиссий и штрафов
+            if best_deposit.fee:
+                total_fees += best_deposit.fee / 12  # Комиссия разбивается на месяцы
+
+            if worst_loan.penalty:
+                total_penalties += worst_loan.penalty / 12  # Штраф делится на месяцы
+
+            net_savings = deposit_income - loan_payment - (total_fees + total_penalties)
+
             monthly_report.append({
                 "month": month,
                 "deposit_income": round(deposit_income, 2),
                 "loan_payment": round(loan_payment, 2),
-                "net_savings": round(deposit_income - loan_payment, 2)
+                "fees": round(total_fees, 2),
+                "penalties": round(total_penalties, 2),
+                "net_savings": round(net_savings, 2)
             })
 
             current_date += timedelta(days=30)  # Переходим к следующему месяцу
 
-        savings = total_deposit_income - total_loan_overpayment
+        savings = total_deposit_income - total_loan_overpayment - total_fees - total_penalties
 
         logging.info(f"📊 Доход с депозита: {total_deposit_income:.2f}")
         logging.info(f"📊 Переплата по кредиту: {total_loan_overpayment:.2f}")
-        logging.info(f"💡 Итоговая разница: {savings:.2f}")
+        logging.info(f"💡 Итоговая разница (учитывая комиссии и штрафы): {savings:.2f}")
 
         retrospective_analysis.append({
             "past_deposit_income": round(total_deposit_income, 2),
             "past_loan_overpayment": round(total_loan_overpayment, 2),
+            "total_fees": round(total_fees, 2),
+            "total_penalties": round(total_penalties, 2),
             "potential_savings": round(savings, 2),
             "start_date": retrospective_start.strftime("%Y-%m-%d"),
             "end_date": datetime.utcnow().strftime("%Y-%m-%d")
@@ -113,5 +161,6 @@ async def optimize_finances(user_id: int, db: AsyncSession):
     return {
         "recommendations": recommendations,
         "retrospective_analysis": retrospective_analysis,
-        "monthly_report": monthly_report
-    }
+        "monthly_report
+::contentReference[oaicite:0]{index=0}
+ 
