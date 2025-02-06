@@ -4,6 +4,8 @@ import api from "../api/api";
 interface Recommendation {
   id: number;
   message: string;
+  current_outcome: number;
+  optimized_outcome: number;
 }
 
 const Recommendations: React.FC = () => {
@@ -13,9 +15,9 @@ const Recommendations: React.FC = () => {
   useEffect(() => {
     console.log("Запрос к API:", "/api/optimize?user_id=1");
 
-    api.get("/api/optimize", { params: { user_id: 1 } }) // Передаем user_id
+    api.get("/api/optimize", { params: { user_id: 1 } })
       .then((response) => {
-        console.log("API Response:", response.data); // Логируем ответ API
+        console.log("API Response:", response.data);
         setRecommendations(response.data);
       })
       .catch((error) => {
@@ -33,15 +35,35 @@ const Recommendations: React.FC = () => {
       {loading ? (
         <p className="mt-4 text-gray-700">Загрузка...</p>
       ) : (
-        <div className="mt-4 w-full max-w-3xl bg-white p-4 rounded-lg shadow">
+        <div className="mt-4 w-full max-w-4xl bg-white p-4 rounded-lg shadow">
           {recommendations.length === 0 ? (
             <p className="text-gray-700">Пока рекомендаций нет.</p>
           ) : (
-            <ul className="list-disc pl-5">
+            <div>
               {recommendations.map((rec) => (
-                <li key={rec.id} className="text-gray-800">{rec.message}</li>
+                <div key={rec.id} className="mb-6 p-4 border rounded-lg shadow">
+                  <p className="text-gray-800 font-bold">{rec.message}</p>
+                  <table className="w-full border-collapse border border-gray-300 mt-2">
+                    <thead>
+                      <tr className="bg-gray-200">
+                        <th className="border border-gray-300 px-4 py-2">Сценарий</th>
+                        <th className="border border-gray-300 px-4 py-2">Финальный результат (год)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="border border-gray-300 px-4 py-2">Текущая стратегия</td>
+                        <td className="border border-gray-300 px-4 py-2">{rec.current_outcome.toFixed(2)} ₽</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-300 px-4 py-2">Оптимизированная стратегия</td>
+                        <td className="border border-gray-300 px-4 py-2">{rec.optimized_outcome.toFixed(2)} ₽</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       )}
