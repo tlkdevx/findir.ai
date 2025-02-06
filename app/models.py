@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -61,5 +61,10 @@ class FinancialRecord(Base):
     last_interest_change_date = Column(DateTime, nullable=True)  # Дата последнего изменения ставки
     penalty_fee = Column(Float, nullable=True)  # Штраф за просрочку платежа
     flexible_interest = Column(Boolean, default=False)  # Есть ли гибкая процентная ставка
+
+    # 🔥 **НОВЫЕ ПАРАМЕТРЫ** 🔥
+    fee = Column(Float, nullable=True)  # Дополнительная комиссия
+    penalty = Column(Float, nullable=True)  # Штраф за нарушение условий
+    interest_rate_changes = Column(JSON, nullable=True)  # История изменений процентных ставок
 
     user = relationship("User", back_populates="financial_records")
