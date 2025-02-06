@@ -56,4 +56,10 @@ class FinancialRecord(Base):
     overdraft_available = Column(Boolean, default=False)  # Возможность овердрафта
     overdraft_limit = Column(Float, nullable=True)  # Лимит овердрафта
 
+    # Новые параметры для расширенного анализа
+    liquidity_check = Column(Boolean, default=True)  # Проверка ликвидности
+    last_interest_change_date = Column(DateTime, nullable=True)  # Дата последнего изменения ставки
+    penalty_fee = Column(Float, nullable=True)  # Штраф за просрочку платежа
+    flexible_interest = Column(Boolean, default=False)  # Есть ли гибкая процентная ставка
+
     user = relationship("User", back_populates="financial_records")
