@@ -8,6 +8,7 @@ from app.crud import (
     create_financial_record, get_financial_records, delete_financial_record
 )
 from app.routes.optimizer import router as optimizer_router
+from app.api.recommendations import router as recommendations_router  # ✅ ДОБАВЛЕН ИМПОРТ RECOMMENDATIONS
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -21,9 +22,9 @@ app.add_middleware(
     allow_headers=["*"],  # Разрешает все заголовки
 )
 
-
 # ✅ Добавляем маршруты
 app.include_router(optimizer_router)
+app.include_router(recommendations_router, prefix="/api")  # ✅ ДОБАВЛЕН ЭНДПОИНТ /recommendations
 
 @app.get("/")
 def read_root():
