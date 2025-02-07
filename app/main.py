@@ -1,11 +1,13 @@
+# Путь: app/main.py
+
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import text
 from app.database import get_db
 from app.schemas import UserCreate, UserResponse, FinancialRecordCreate, FinancialRecordResponse
 from app.crud import (
     get_users, get_user, create_user, delete_user,
-    create_financial_record, get_financial_records, delete_financial_record
+    create_financial_record, get_financial_records, delete_financial_record,
+    get_recommendations_from_db, create_test_financial_data  # Импортируем необходимые функции
 )
 from app.routes.optimizer import router as optimizer_router
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,8 +23,7 @@ app.add_middleware(
     allow_headers=["*"],  # Разрешает все заголовки
 )
 
-
-# ✅ Добавляем маршруты
+# Добавляем маршруты
 app.include_router(optimizer_router)
 
 @app.get("/")
@@ -32,12 +33,27 @@ def read_root():
 @app.get("/ping_db")
 async def ping_db(db: AsyncSession = Depends(get_db)):
     try:
-        result = await db.execute(text("SELECT 1"))
+        result = await db.execute("SELECT 1")
         return {"status": "Database connected", "result": result.scalar()}
     except Exception as e:
         return {"status": "Database connection failed", "error": str(e)}
 
-# ✅ CRUD Пользователей
+# Создание второго пользователя и тестовых данных
+@app.post("/users/create_test_user")
+async def create_test_user(db: AsyncSession = Depends(get_db)):
+    try:
+        # Создаем второго пользователя
+        user_data = UserCreate(username="user2", email="user2@example.com", password="password")
+        new_user = await create_user(db, user_data)
+
+        # Добавляем тестовые финансовые записи
+        await create_test_financial_data(db, new_user.id)
+        return {"message": "Test user created successfully", "user_id": new_user.id}
+    except Exception as e:
+        print(f"Error creating test user: {e}")  # Отладочный вывод
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+# CRUD Пользователей
 @app.post("/users", response_model=UserResponse)
 async def create_new_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     db_user = await create_user(db, user)
@@ -63,7 +79,7 @@ async def remove_user(user_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted"}
 
-# ✅ CRUD Финансовых данных
+# Финансовые записи для пользователя
 @app.post("/users/{user_id}/finance", response_model=FinancialRecordResponse)
 async def add_financial_record(user_id: int, record: FinancialRecordCreate, db: AsyncSession = Depends(get_db)):
     return await create_financial_record(db, user_id, record)
@@ -78,3 +94,11 @@ async def remove_financial_record(record_id: int, db: AsyncSession = Depends(get
     if not success:
         raise HTTPException(status_code=404, detail="Record not found")
     return {"message": "Record deleted"}
+
+# Маршрут для рекомендаций
+@app.get("/api/recommendations")
+async def get_recommendations(user_id: int, db: AsyncSession = Depends(get_db)):
+    recommendations = await get_recommendations_from_db(db, user_id)
+    if recommendations is None:
+        raise HTTPException(status_code=404, detail="Recommendations not found")
+    return recommendations

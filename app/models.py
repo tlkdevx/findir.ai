@@ -1,9 +1,11 @@
+# Путь: app/models.py
+
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
 
-# ====== Модель пользователя ======
+# Модель пользователя
 class User(Base):
     __tablename__ = "users"
 
@@ -14,7 +16,7 @@ class User(Base):
 
     financial_records = relationship("FinancialRecord", back_populates="user", cascade="all, delete")
 
-# ====== Модель финансовых данных ======
+# Модель финансовых данных
 class FinancialRecord(Base):
     __tablename__ = "financial_records"
 
