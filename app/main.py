@@ -1,3 +1,19 @@
+import sys
+import os
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from . import models, schemas, crud
+from .database import SessionLocal, engine
+import logging
+
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Путь: app/main.py
 
 from fastapi import FastAPI, Depends, HTTPException
@@ -101,4 +117,14 @@ async def get_recommendations(user_id: int, db: AsyncSession = Depends(get_db)):
     recommendations = await get_recommendations_from_db(db, user_id)
     if recommendations is None:
         raise HTTPException(status_code=404, detail="Recommendations not found")
+    return recommendations
+
+@app.get("/recommendations/{user_id}", response_model=schemas.Recommendation)
+def get_recommendations(user_id: int, db: Session = Depends(get_db)):
+    user = crud.get_user(db, user_id=user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    recommendations = crud.get_recommendations_from_db(db, user_id=user_id)
+    logger.info(f"Recommendations for user {user_id}: {recommendations}")
     return recommendations
